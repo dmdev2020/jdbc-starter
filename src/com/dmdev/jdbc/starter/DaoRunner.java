@@ -8,7 +8,19 @@ import java.math.BigDecimal;
 public class DaoRunner {
 
     public static void main(String[] args) {
-        deleteTest(59L);
+        var tickets = TicketDao.getInstance().findAll();
+        System.out.println();
+    }
+
+    private static void updateTest() {
+        var ticketDao = TicketDao.getInstance();
+        var maybeTicket = ticketDao.findById(2L);
+        System.out.println(maybeTicket);
+
+        maybeTicket.ifPresent(ticket -> {
+            ticket.setCost(BigDecimal.valueOf(188.88));
+            ticketDao.update(ticket);
+        });
     }
 
     private static void deleteTest(Long id) {
