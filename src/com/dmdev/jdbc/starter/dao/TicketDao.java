@@ -1,5 +1,6 @@
 package com.dmdev.jdbc.starter.dao;
 
+import com.dmdev.jdbc.starter.dto.TicketFilter;
 import com.dmdev.jdbc.starter.entity.Ticket;
 import com.dmdev.jdbc.starter.exception.DaoException;
 import com.dmdev.jdbc.starter.util.ConnectionManager;
@@ -10,6 +11,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import static java.util.stream.Collectors.joining;
 
 public class TicketDao {
 
@@ -45,6 +48,41 @@ public class TicketDao {
             """;
 
     private TicketDao() {
+    }
+
+    public List<Ticket> findAll(TicketFilter filter) {
+        List<Object> parameters = new ArrayList<>();
+        List<String> whereSql = new ArrayList<>();
+        if (filter.seatNo() != null) {
+            whereSql.add("seat_no LIKE ?");
+            parameters.add("%" + filter.seatNo() + "%");
+        }
+        if (filter.passengerName() != null) {
+            whereSql.add("passenger_name = ?");
+            parameters.add(filter.passengerName());
+        }
+        parameters.add(filter.limit());
+        parameters.add(filter.offset());
+        var where = whereSql.stream()
+                .collect(joining(" AND ", " WHERE ", " LIMIT ? OFFSET ? "));
+
+        var sql = FIND_ALL_SQL + where;
+
+        try (var connection = ConnectionManager.get();
+             var preparedStatement = connection.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            System.out.println(preparedStatement);
+            var resultSet = preparedStatement.executeQuery();
+            List<Ticket> tickets = new ArrayList<>();
+            while (resultSet.next()) {
+                tickets.add(buildTicket(resultSet));
+            }
+            return tickets;
+        } catch (SQLException throwables) {
+            throw new DaoException(throwables);
+        }
     }
 
     public List<Ticket> findAll() {
